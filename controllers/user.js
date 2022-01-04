@@ -105,10 +105,9 @@ module.exports.update=async (req,res)=>{
 }
 
 module.exports.deleteAvatar=async (req,res)=>{
-    if(req.user.id==req.params.id){
+    if(req.user==req.params.id){
         try{
             let user = await User.findById(req.params.id);
-            console.log(user);
             if (user.avatar){
                 if(fs.existsSync(path.join(__dirname, '..', user.avatar))){
                     fs.unlinkSync(path.join(__dirname, '..', user.avatar));
