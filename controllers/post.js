@@ -1,5 +1,6 @@
 const Post=require('../models/post');
 const Comment=require('../models/comment');
+const Like=require('../models/like');
 const User=require('../models/user');
 const fs=require('fs');
 const path=require('path');
@@ -37,12 +38,17 @@ module.exports.allpost=async (req,res)=>{
         .populate(
             {
                 path:'comments',
-                populate:{
+                populate:[{
                     path:'user',
                     select:'name'
-                }
+                    },
+                    {
+                    path: 'likes'
+                    }
+                ]
             }
         )
+        .populate('likes')
         .sort('-createdAt');
         return res.status(200).json({success:true,post});
 
@@ -58,16 +64,26 @@ module.exports.getpost=async (req,res)=>{
         .populate(
             {
                 path:'posts',
-                populate:{
+                populate:[
+                    {
                     path:'comments',
-                    populate:{
+                    populate:[
+                        {
                         path:'user',
                         select:'name'
-                    }
+                        },
+                        {
+                        path: 'likes'
+                        }
+                    ]
                 },
+                {
+                    path:'likes'
+                }
+                ],
                 options:{sort:{'createdAt':-1}}
             }
-        );
+        )
         return res.status(200).json({success:true,post});
 
     }catch(error){
@@ -122,6 +138,8 @@ module.exports.delete=async (req,res)=>{
     try{
         let post=await Post.findById(req.params.id);
         if(req.user==post.user){
+            await Like.deleteMany({likeable: post, onModel: 'post'});
+            await Like.deleteMany({_id: {$in: post.comments.likes}});
             if(post.file){
                 if(fs.existsSync(path.join(__dirname,'..',post.file))){
                     fs.unlinkSync(path.join(__dirname,'..',post.file));

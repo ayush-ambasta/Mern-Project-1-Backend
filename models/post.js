@@ -19,7 +19,13 @@ const postSchema=new mongoose.Schema({
     }],
     file:{
         type:String
-    }
+    },
+    likes:[
+        {
+            type:mongoose.Schema.Types.ObjectId,
+            ref:'like'
+        }
+    ]
 },{
     timestamps:true
 });

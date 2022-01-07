@@ -49,6 +49,7 @@ module.exports.delete=async(req,res)=>{
             let postId=comment.post;
             comment.remove();
             await Post.findByIdAndUpdate(postId,{$pull:{comments:req.params.id}});   
+            await Like.deleteMany({likeable: comment._id, onModel: 'Comment'});
             return res.status(200).json({success:true,msg:"Comment deleted"});
         }else{
             return res.status(401).json({success:false,msg:'Not authorized'});

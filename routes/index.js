@@ -9,6 +9,7 @@ router.get('/',(req,res)=>{
 router.use('/user',require('./user'));
 router.use('/posts',require('./posts'));
 router.use('/comments',require('./comments'));
+router.use('/likes',require('./likes'));
 // router.get('/authentication',isAuth,function(req,res){res.status(200).json({success:true,msg:"authorized"})});
 
 module.exports=router;
