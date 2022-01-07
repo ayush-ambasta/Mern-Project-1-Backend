@@ -1,6 +1,6 @@
 const Comment =require('../models/comment');
 const Post=require('../models/post');
-
+const Like=require('../models/like');
 module.exports.create=async(req,res)=>{
     try{
         let post=await Post.findById(req.body.post);
@@ -47,14 +47,14 @@ module.exports.delete=async(req,res)=>{
         let post= await Post.findById(comment.post);
         if(comment.user == req.user || post.user==req.user){
             let postId=comment.post;
+            await Like.deleteMany({likeable: comment._id, onModel: 'comment'});
             comment.remove();
             await Post.findByIdAndUpdate(postId,{$pull:{comments:req.params.id}});   
-            await Like.deleteMany({likeable: comment._id, onModel: 'Comment'});
             return res.status(200).json({success:true,msg:"Comment deleted"});
         }else{
             return res.status(401).json({success:false,msg:'Not authorized'});
         }
-    }catch(err){
+    }catch(error){
         console.log(error);
         return res.status(500).json({success:false,msg:"Internal Server Error"});
     }
