@@ -1,5 +1,5 @@
 # This Website is Live 
-http://mern-ayush.herokuapp.com/
+https://socialmediamernproject.netlify.app/
 
 # Frontend
 https://github.com/ayush-ambasta/Mern-project-1-Frontend
