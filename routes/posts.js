@@ -8,5 +8,6 @@ router.get('/allpost',isAuth,Controller.allpost);
 router.get('/getpost/:id',isAuth,Controller.getpost);
 router.put('/update/:id',isAuth,Controller.updatepost);
 router.delete('/delete/:id',isAuth,Controller.delete);
+router.get('/media/:filename',Controller.getmedia);
 
 module.exports=router;
