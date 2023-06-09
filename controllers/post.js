@@ -3,8 +3,8 @@ const Comment=require('../models/comment');
 const mongoose=require('mongoose');
 const Like=require('../models/like');
 const User=require('../models/user');
-const fs=require('fs');
-const path=require('path');
+// const fs=require('fs');
+// const path=require('path');
 
 module.exports.create=async (req,res)=>{
     try{

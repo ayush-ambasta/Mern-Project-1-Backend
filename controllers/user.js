@@ -1,7 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt=require("jsonwebtoken");
-const fs=require('fs');
-const path=require('path');
+// const fs=require('fs');
+const mongoose=require('mongoose');
+// const path=require('path');
 const {validateNewUser}=require("../middleware/validation");
 const User=require('../models/user');
 const JWT_SECRET=process.env.JWT_SECRET;
@@ -78,25 +79,32 @@ module.exports.update=async (req,res)=>{
     if(req.user==req.params.id){
         try {
             let user = await User.findById(req.params.id);
-            User.uploadedAvatar(req, res, function(err){
+            User.uploadedAvatar(req, res, async(err)=>{
                 if (err) {return res.status(500).json({"msg":"Image only"})}
                 if(req.body.name){
                  user.name = req.body.name;
                 }
                 if (req.file){
                     if (user.avatar){
-                        if(fs.existsSync(path.join(__dirname, '..', user.avatar))){
-                            fs.unlinkSync(path.join(__dirname, '..', user.avatar));
+                        //first delete
+                        const bucket=new mongoose.mongo.GridFSBucket(mongoose.connection.db,{
+                            bucketName:'avatar'
+                        });
+                        let filename=user.avatar;
+                        let deletefile= await bucket.find({filename}).toArray();
+                        if(deletefile){
+                            bucket.delete(deletefile[0]._id);
                         }
+                        user.avatar=req.file.filename;
                     }
-                    user.avatar = User.avatarPath + '/' + req.file.filename;
+                    user.avatar =req.file.filename;
                 }
                 user.save();
                 res.status(200).json({success:true,msg:"Updated Successfully"});
             });
         } catch (error) {
             console.log(error);
-            res.status(500).json({msg:"Internal server error"});
+            res.status(500).json({msg:error});
         }
     }else{
         return res.status(401).send('Unauthorized');
@@ -109,13 +117,17 @@ module.exports.deleteAvatar=async (req,res)=>{
         try{
             let user = await User.findById(req.params.id);
             if (user.avatar){
-                if(fs.existsSync(path.join(__dirname, '..', user.avatar))){
-                    fs.unlinkSync(path.join(__dirname, '..', user.avatar));
-                    let avatar=user.avatar
-                    user.avatar="";
-                    user.save();
-                    res.status(200).json({success:true,msg:"Deleted Successfully"});
+                const bucket=new mongoose.mongo.GridFSBucket(mongoose.connection.db,{
+                    bucketName:'avatar'
+                });
+                let filename=user.avatar;
+                let deletefile= await bucket.find({filename}).toArray();
+                if(deletefile){
+                    bucket.delete(deletefile[0]._id);
                 }
+                user.avatar="";
+                user.save();
+                res.status(200).json({success:true,msg:"Deleted Successfully"});
             }else{
                 res.status(404).json({success:false,msg:"No Avatar found"})
             }
@@ -153,5 +165,26 @@ module.exports.profile=async (req,res)=>{
     }catch(error){
         console.log(error);
         res.status(500).json({success:false,msg:"Internal server error"})
+    }
+}
+
+module.exports.getmedia=async(req,res)=>{
+    try{
+        const bucket=new mongoose.mongo.GridFSBucket(mongoose.connection.db,{
+            bucketName:'avatar'
+        });
+        let downloadStream=bucket.openDownloadStreamByName(req.params.filename);
+        downloadStream.on("data",function(data){
+            return res.status(200).write(data);
+        });
+        downloadStream.on("error",function(err){
+            return res.status(404).send({msg:"cannot"});
+        })
+        downloadStream.on("end",()=>{
+            return res.end();
+        })
+    }catch(error){
+        console.log(error)
+        res.status(500).json({msg:"something went wrong"});
     }
 }
