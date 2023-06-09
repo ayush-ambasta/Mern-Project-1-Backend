@@ -10,4 +10,5 @@ router.post('/search',isAuth,Controller.search);
 router.delete('/deleteAvatar/:id',isAuth,Controller.deleteAvatar);
 router.get('/profile',isAuth,Controller.profile);
 router.get('/profile/:id',isAuth,Controller.profile);
+router.get('/media/:filename',Controller.getmedia);
 module.exports = router;
