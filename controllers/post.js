@@ -1,5 +1,6 @@
 const Post=require('../models/post');
 const Comment=require('../models/comment');
+const mongoose=require('mongoose');
 const Like=require('../models/like');
 const User=require('../models/user');
 const fs=require('fs');
@@ -97,18 +98,23 @@ module.exports.updatepost=async (req,res)=>{
         const post=await Post.findById(req.params.id);
         if(post){
             if(req.user==post.user){
-                Post.uploadedPost(req,res,function(err){
+                Post.uploadedPost(req,res,async (err)=>{
                     if(err){return res.status(500).json({Success:false,"msg":"Error From Multer"})}
                     
                     let file;
                     let content;
                     if(req.body.content && req.file){
-                        file=Post.postfile + '/' + req.file.filename;
+                        file=req.file.filename;
                         content=req.body.content;
                         post.content=content;
                         if(post.file){
-                            if(fs.existsSync(path.join(__dirname,'..',post.file))){
-                                fs.unlinkSync(path.join(__dirname,'..',post.file));
+                            const bucket=new mongoose.mongo.GridFSBucket(mongoose.connection.db,{
+                                bucketName:'postmedia'
+                            });
+                            let filename=post.file;
+                            let deletefile= await bucket.find({filename}).toArray();
+                            if(deletefile){
+                                bucket.delete(deletefile[0]._id);
                             }
                         }
                         post.file=file;
@@ -141,11 +147,16 @@ module.exports.delete=async (req,res)=>{
             await Like.deleteMany({likeable: post, onModel: 'post'});
             await Like.deleteMany({_id: {$in: post.comments.likes}});
             if(post.file){
-                if(fs.existsSync(path.join(__dirname,'..',post.file))){
-                    fs.unlinkSync(path.join(__dirname,'..',post.file));
+                const bucket=new mongoose.mongo.GridFSBucket(mongoose.connection.db,{
+                    bucketName:'postmedia'
+                });
+                let filename=post.file;
+                let deletefile= await bucket.find({filename}).toArray();
+                if(deletefile){
+                    bucket.delete(deletefile[0]._id);
                 }
             }
-            post.remove();
+            await post.remove();
             await Comment.deleteMany({post:req.params.id});
             return res.status(200).json({success:true,msg:'deleted Successfully'});
         }else{
@@ -154,5 +165,26 @@ module.exports.delete=async (req,res)=>{
     }catch(error){
         console.log(error);
         return res.status(500).json({success:false,msg:"Internal Server Error"});
+    }
+}
+
+module.exports.getmedia=async(req,res)=>{
+    try{
+        const bucket=new mongoose.mongo.GridFSBucket(mongoose.connection.db,{
+            bucketName:'postmedia'
+        });
+        let downloadStream=bucket.openDownloadStreamByName(req.params.filename);
+        downloadStream.on("data",function(data){
+            return res.status(200).write(data);
+        });
+        downloadStream.on("error",function(err){
+            return res.status(404).send({msg:"cannot"});
+        })
+        downloadStream.on("end",()=>{
+            return res.end();
+        })
+    }catch(error){
+        console.log(error)
+        res.status(500).json({msg:"something went wrong"});
     }
 }
